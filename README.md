@@ -18,7 +18,7 @@ To calculate the relative price, first choose the training and trading period le
 The model may be run with three functions: period_profits, det_period_profits, and cp_period_profits. The latter two gives detailed information of trades.
 
 To use the functions period_profits and det_period_profits, the following parameters must be specified:
-- X: the dataset
+- X: dataframe of the dataset
 - year: the year used for pair formulation
 - trigger_size: the trigger_size * avg_pair_distance is the minimum distance to open a position (2 is default)
 - stop_size: the stop_size * avg_pair_distance is the maximum loss before closing a position (0 is default and represents no stop)
