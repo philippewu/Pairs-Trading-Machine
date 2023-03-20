@@ -3,6 +3,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.neighbors import kneighbors_graph
+from sklearn.manifold import TSNE
+from sklearn.linear_model import LinearRegression
+from scipy.sparse.csgraph import dijkstra
 from scipy.stats import gmean
 import statsmodels.api as sm
 
