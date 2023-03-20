@@ -52,10 +52,10 @@ def prc_dist_raw(X, TCK, year, num_pairs):
 			dist = np.inf
 		dist_yr.append([i,dist])
 
-		dist_yr = np.array(dist_yr)
-		top_pairs = dist_yr[dist_yr[:,1].argsort()]
+	dist_yr = np.array(dist_yr)
+	top_pairs = dist_yr[dist_yr[:,1].argsort()]
 
-		return top_pairs[0:num_pairs,:]
+	return top_pairs[0:num_pairs,:]
 
 
 
@@ -79,147 +79,147 @@ def prc_dist_data(X, year):
 
 # given a pair, find the pair distance over a given year
 def prc_dist(X, pair1, pair2, year):
-    rel_PRC = X.loc[X["year"]==year,["TICKER","eff_rel_PRC"]].values
-    trading_days = rel_PRC[rel_PRC[:,0]=="WMT",:]
-    pair1_rel_prc = rel_PRC[rel_PRC[:,0]==pair1,:]
-    pair2_rel_prc = rel_PRC[rel_PRC[:,0]==pair2,:]
-    dist = np.sum(np.sqrt((pair1_rel_prc[:,1].astype(float) - pair2_rel_prc[:,1].astype(float)) ** 2)) / len(trading_days)
-    return dist
+	rel_PRC = X.loc[X["year"]==year,["TICKER","eff_rel_PRC"]].values
+	trading_days = rel_PRC[rel_PRC[:,0]=="WMT",:]
+	pair1_rel_prc = rel_PRC[rel_PRC[:,0]==pair1,:]
+	pair2_rel_prc = rel_PRC[rel_PRC[:,0]==pair2,:]
+	dist = np.sum(np.sqrt((pair1_rel_prc[:,1].astype(float) - pair2_rel_prc[:,1].astype(float)) ** 2)) / len(trading_days)
+	return dist
 
 
 # given all relative prices, find the nearest neighbor graph of all stock pairs
 def prc_dist_nn(data):
-    M = kneighbors_graph(data, len(data) - 1, mode='distance').toarray()
-    return M
+	M = kneighbors_graph(data, len(data) - 1, mode='distance').toarray()
+	return M
 
 
 # return n best pairs within a given year
 def top_pairs(M, num_pairs, tickers):
-    M = np.triu(M)
-    M = np.where(M == 0, np.inf, M)
-    top_pairs = np.argwhere(np.isin(M, np.sort(M.flatten())[0:num_pairs]))
-    
-    shp = np.shape(top_pairs)
-    mapped = np.empty(shp, dtype='<U5')
-    for index, x in np.ndenumerate(top_pairs):
-        mapped[index[0], index[1]] = tickers[x]
+	M = np.triu(M)
+	M = np.where(M == 0, np.inf, M)
+	top_pairs = np.argwhere(np.isin(M, np.sort(M.flatten())[0:num_pairs]))
+	
+	shp = np.shape(top_pairs)
+	mapped = np.empty(shp, dtype='<U5')
+	for index, x in np.ndenumerate(top_pairs):
+		mapped[index[0], index[1]] = tickers[x]
         
-    dist_map = []
-    for i in top_pairs:
-        dist_map.append(M[i[0]][i[1]])
+	dist_map = []
+	for i in top_pairs:
+		dist_map.append(M[i[0]][i[1]])
 
-    dist_map = np.array(dist_map).reshape(num_pairs,1)
+	dist_map = np.array(dist_map).reshape(num_pairs,1)
         
-    return top_pairs, mapped, dist_map
+	return top_pairs, mapped, dist_map
 
 
 
 ## MACHINE FUNCTIONS: these functions operate the trades
 # given the year and the pair of stocks, return the trading profits of that period
 def backtesting(X, year, pair1, pair2, trigger_size, stop_size, mode, trade_year):
-    # model dependent parameter initialization
-    if mode == 0:
-        trading_days = len(X.loc[(X["TICKER"]=="WMT")*(X["year"]==year)])
-        yr_data = X.loc[X["year"]==year,:]
-        p1 = yr_data.loc[X["TICKER"]==pair1,['eff_PRC','eff_rel_PRC']].values
-        p2 = yr_data.loc[X["TICKER"]==pair2,['eff_PRC','eff_rel_PRC']].values
-        last_day = np.round(len(p1) / 1).astype(int)
-    else:
-        trading_days = len(X.loc[(X["TICKER"]=="WMT")*(X["year"]==trade_year)])
-        yr_data = X.loc[X["year"]==trade_year,:]
-        p1 = yr_data.loc[X["TICKER"]==pair1,['eff_PRC','eff_rel_PRC']].values
-        p2 = yr_data.loc[X["TICKER"]==pair2,['eff_PRC','eff_rel_PRC']].values
-        last_day = np.round(len(p1) / 1).astype(int)
+	# model dependent parameter initialization
+	if mode == 0:
+		trading_days = len(X.loc[(X["TICKER"]=="WMT")*(X["year"]==year)])
+		yr_data = X.loc[X["year"]==year,:]
+		p1 = yr_data.loc[X["TICKER"]==pair1,['eff_PRC','eff_rel_PRC']].values
+		p2 = yr_data.loc[X["TICKER"]==pair2,['eff_PRC','eff_rel_PRC']].values
+		last_day = np.round(len(p1) / 1).astype(int)
+	else:
+		trading_days = len(X.loc[(X["TICKER"]=="WMT")*(X["year"]==trade_year)])
+		yr_data = X.loc[X["year"]==trade_year,:]
+		p1 = yr_data.loc[X["TICKER"]==pair1,['eff_PRC','eff_rel_PRC']].values
+		p2 = yr_data.loc[X["TICKER"]==pair2,['eff_PRC','eff_rel_PRC']].values
+		last_day = np.round(len(p1) / 1).astype(int)
     
-    if (len(p1) != trading_days) or (len(p2) != trading_days):
-        return np.array([]), np.array([]), 0
-    
-    div = (p1[:,1] - p2[:,1]).flatten()[:last_day]
-    distance = prc_dist(X, pair1, pair2, year - 1)
-    
-    if stop_size == 0:
-        stop = np.zeros(len(div)) > 1
-        trigger = np.where(np.absolute(div) > distance * trigger_size)
-    else:
-        stop = np.absolute(div) > distance * stop_size
-        trigger = np.where((np.absolute(div) > distance * trigger_size) * (np.absolute(div) < distance * stop_size))
-    
-    # trading machine
-    cross = div > 0
-    close_day = 0
-    trades = []
-    
-    while True:
-        open_days = trigger[0][trigger[0] > close_day]
-        if len(open_days) > 0:
-            open_day = open_days[0]
+	if (len(p1) != trading_days) or (len(p2) != trading_days):
+		return np.array([]), np.array([]), 0
+
+	div = (p1[:,1] - p2[:,1]).flatten()[:last_day]
+	distance = prc_dist(X, pair1, pair2, year - 1)
+	
+	if stop_size == 0:
+		stop = np.zeros(len(div)) > 1
+		trigger = np.where(np.absolute(div) > distance * trigger_size)
+	else:
+		stop = np.absolute(div) > distance * stop_size
+		trigger = np.where((np.absolute(div) > distance * trigger_size) * (np.absolute(div) < distance * stop_size))
+
+	# trading machine
+	cross = div > 0
+	close_day = 0
+	trades = []
+	
+	while True:
+		open_days = trigger[0][trigger[0] > close_day]
+		if len(open_days) > 0:
+			open_day = open_days[0]
+			
+			if cross[open_day]:
+				a = np.where(~cross[open_day:])[0]
+				b = np.where(stop[open_day:])[0]
+				if (len(a) > 0) and (len(b) > 0):
+					close_day = min(a[0], b[0])
+					if close_day == b[0]:
+						close_day += open_day
+						trades.append([open_day, close_day, cross[open_day]])
+						break
+				elif len(a) > 0:
+					close_day = a[0]
+				elif len(b) > 0:
+					close_day = b[0]
+					close_day += open_day
+					trades.append([open_day, close_day, cross[open_day]])
+					break
+				else:
+					close_day = 1000
+			else:
+				a = np.where(cross[open_day:])[0]
+				b = np.where(stop[open_day:])[0]
+				if (len(a) > 0) and (len(b) > 0):
+					close_day = min(a[0], b[0])
+					if close_day == b[0]:
+						close_day += open_day
+						trades.append([open_day, close_day, cross[open_day]])
+						break
+				elif len(a) > 0:
+					close_day = a[0]
+				elif len(b) > 0:
+					close_day = b[0]
+					close_day += open_day
+					trades.append([open_day, close_day, cross[open_day]])
+					break
+				else:
+					close_day = 1000
             
-            if cross[open_day]:
-                a = np.where(~cross[open_day:])[0]
-                b = np.where(stop[open_day:])[0]
-                if (len(a) > 0) and (len(b) > 0):
-                    close_day = min(a[0], b[0])
-                    if close_day == b[0]:
-                        close_day += open_day
-                        trades.append([open_day, close_day, cross[open_day]])
-                        break
-                elif len(a) > 0:
-                    close_day = a[0]
-                elif len(b) > 0:
-                    close_day = b[0]
-                    close_day += open_day
-                    trades.append([open_day, close_day, cross[open_day]])
-                    break
-                else:
-                    close_day = 1000
-            else:
-                a = np.where(cross[open_day:])[0]
-                b = np.where(stop[open_day:])[0]
-                if (len(a) > 0) and (len(b) > 0):
-                    close_day = min(a[0], b[0])
-                    if close_day == b[0]:
-                        close_day += open_day
-                        trades.append([open_day, close_day, cross[open_day]])
-                        break
-                elif len(a) > 0:
-                    close_day = a[0]
-                elif len(b) > 0:
-                    close_day = b[0]
-                    close_day += open_day
-                    trades.append([open_day, close_day, cross[open_day]])
-                    break
-                else:
-                    close_day = 1000
-            
-            close_day += open_day
-            trades.append([open_day, close_day, cross[open_day]])
-        else:
-            break
+			close_day += open_day
+			trades.append([open_day, close_day, cross[open_day]])
+		else:
+			break
         
-    trades = np.array(trades)
-    
-    # return calculation
-    pi = []
-    for i in trades:
-        if i[2] == 1:
-            if i[1] < 1000:
-                pi_pt = (p1[:,0][i[0]] / p1[:,0][i[1]]) + (p2[:,0][i[1]] / p2[:,0][i[0]]) - 2
-            else:
-                pi_pt = (p1[:,0][i[0]] / p1[:,0][last_day - 1]) + (p2[:,0][last_day - 1] / p2[:,0][i[0]]) - 2
-        else:
-            if i[1] < 1000:
-                pi_pt = (p1[:,0][i[1]] / p1[:,0][i[0]]) + (p2[:,0][i[0]] / p2[:,0][i[1]]) - 2
-            else:
-                pi_pt = (p1[:,0][last_day - 1] / p1[:,0][i[0]]) + (p2[:,0][i[0]] / p2[:,0][last_day - 1]) - 2
-        pi.append(pi_pt)
-    
-    pi = np.array(pi)
-    tot_pi = np.sum(pi)
-    
-    # trades is a 2d array with information on the duration and execution of each trade for each stock pair
-    # pi is an array of the profits for each pair
-    # tot_pi is the total profits of the entire portfolio
-    return trades, pi, tot_pi
+	trades = np.array(trades)
+	
+	# return calculation
+	pi = []
+	for i in trades:
+		if i[2] == 1:
+			if i[1] < 1000:
+				pi_pt = (p1[:,0][i[0]] / p1[:,0][i[1]]) + (p2[:,0][i[1]] / p2[:,0][i[0]]) - 2
+			else:
+				pi_pt = (p1[:,0][i[0]] / p1[:,0][last_day - 1]) + (p2[:,0][last_day - 1] / p2[:,0][i[0]]) - 2
+		else:
+			if i[1] < 1000:
+				pi_pt = (p1[:,0][i[1]] / p1[:,0][i[0]]) + (p2[:,0][i[0]] / p2[:,0][i[1]]) - 2
+			else:
+				pi_pt = (p1[:,0][last_day - 1] / p1[:,0][i[0]]) + (p2[:,0][i[0]] / p2[:,0][last_day - 1]) - 2
+		pi.append(pi_pt)
+
+	pi = np.array(pi)
+	tot_pi = np.sum(pi)
+
+	# trades is a 2d array with information on the duration and execution of each trade for each stock pair
+	# pi is an array of the profits for each pair
+	# tot_pi is the total profits of the entire portfolio
+	return trades, pi, tot_pi
 
 
 
@@ -236,69 +236,69 @@ def backtesting(X, year, pair1, pair2, trigger_size, stop_size, mode, trade_year
 
 # period profits returns the profits of the given period with the specified model
 def period_profits(X, year, trigger_size, stop_size, mode, trade_year):
-    prc, tck = prc_dist_data(X, year)
-    M = prc_dist_nn(prc[:,:,1].astype(float))
-    pair_ind, pair_tck, pair_dist = top_pairs(M, 10, tck)
-    per_pi = 0
-    dead_pairs = 0
+	prc, tck = prc_dist_data(X, year)
+	M = prc_dist_nn(prc[:,:,1].astype(float))
+	pair_ind, pair_tck, pair_dist = top_pairs(M, 10, tck)
+	per_pi = 0
+	dead_pairs = 0
     
-    for i in np.arange(0,len(pair_tck)):
-        days, ind_pi, pair_pi = backtesting(X, year + 1, pair_tck[i][0], pair_tck[i][1], trigger_size, stop_size, mode, trade_year)
-        per_pi += pair_pi
-        if pair_pi == 0:
-            dead_pairs += 1
+	for i in np.arange(0,len(pair_tck)):
+		days, ind_pi, pair_pi = backtesting(X, year + 1, pair_tck[i][0], pair_tck[i][1], trigger_size, stop_size, mode, trade_year)
+		per_pi += pair_pi
+		if pair_pi == 0:
+			dead_pairs += 1
     
-    if (len(pair_tck) - dead_pairs) == 0:
-        per_pi = 0
-    else:
-        per_pi = per_pi / (len(pair_tck) - dead_pairs)
-    
-    return per_pi
+	if (len(pair_tck) - dead_pairs) == 0:
+		per_pi = 0
+	else:
+		per_pi = per_pi / (len(pair_tck) - dead_pairs)
+
+	return per_pi
 
 
 # period profits with details
 def det_period_profits(X, year, trigger_size, stop_size, mode, trade_year, pair_num):
-    prc, tck = prc_dist_data(X, year)
-    M = prc_dist_nn(prc[:,:,1].astype(float))
-    pair_ind, pair_tck, pair_dist = top_pairs(M, pair_num, tck)
-    per_pi = 0
-    dead_pairs = 0
-    
-    info = []
-    
-    for i in np.arange(0,len(pair_tck)):
-        days, ind_pi, pair_pi = backtesting(X, year + 1, pair_tck[i][0], pair_tck[i][1], trigger_size, stop_size, mode, trade_year)
-        per_pi += pair_pi
-        info.append([pair_tck[i], days, ind_pi.round(4), pair_pi])
-        if pair_pi == 0:
-            dead_pairs += 1
-    
-    if (len(pair_tck) - dead_pairs) == 0:
-        per_pi = 0
-    else:
-        per_pi = per_pi / (len(pair_tck) - dead_pairs)
-    
-    return info, per_pi
+	prc, tck = prc_dist_data(X, year)
+	M = prc_dist_nn(prc[:,:,1].astype(float))
+	pair_ind, pair_tck, pair_dist = top_pairs(M, pair_num, tck)
+	per_pi = 0
+	dead_pairs = 0
+
+	info = []
+
+	for i in np.arange(0,len(pair_tck)):
+		days, ind_pi, pair_pi = backtesting(X, year + 1, pair_tck[i][0], pair_tck[i][1], trigger_size, stop_size, mode, trade_year)
+		per_pi += pair_pi
+		info.append([pair_tck[i], days, ind_pi.round(4), pair_pi])
+		if pair_pi == 0:
+			dead_pairs += 1
+
+	if (len(pair_tck) - dead_pairs) == 0:
+		per_pi = 0
+	else:
+		per_pi = per_pi / (len(pair_tck) - dead_pairs)
+
+	return info, per_pi
 
 
 # period profits with custom pair choices (if mode is 1, year determines the distance metric)
 def cp_period_profits(X, cp, year, trigger_size, stop_size, mode, trade_year, pair_num):
-    pair_tck = cp
-    per_pi = 0
-    dead_pairs = 0
-    
-    info = []
-    
-    for i in np.arange(0,len(pair_tck)):
-        days, ind_pi, pair_pi = backtesting(X, year + 1, pair_tck[i][0], pair_tck[i][1], trigger_size, stop_size, mode, trade_year)
-        per_pi += pair_pi
-        info.append([pair_tck[i], days, ind_pi.round(4), pair_pi])
-        if pair_pi == 0:
-            dead_pairs += 1
-    
-    if (len(pair_tck) - dead_pairs) == 0:
-        per_pi = 0
-    else:
-        per_pi = per_pi / (len(pair_tck) - dead_pairs)
-    
-    return info, per_pi
+	pair_tck = cp
+	per_pi = 0
+	dead_pairs = 0
+
+	info = []
+
+	for i in np.arange(0,len(pair_tck)):
+		days, ind_pi, pair_pi = backtesting(X, year + 1, pair_tck[i][0], pair_tck[i][1], trigger_size, stop_size, mode, trade_year)
+		per_pi += pair_pi
+		info.append([pair_tck[i], days, ind_pi.round(4), pair_pi])
+		if pair_pi == 0:
+			dead_pairs += 1
+
+	if (len(pair_tck) - dead_pairs) == 0:
+		per_pi = 0
+	else:
+		per_pi = per_pi / (len(pair_tck) - dead_pairs)
+
+	return info, per_pi
