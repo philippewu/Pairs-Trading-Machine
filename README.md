@@ -3,13 +3,16 @@
 
 This Pairs Trading Machine allows the customization and testing of the classical pairs trading model on historical stock data.
 
+
+## Default Model
+Current implementation closely follows Gatev, Goetzmann, and Rouwenhorst 1998 (https://papers.ssrn.com/sol3/papers.cfm?abstract_id=141615) for the model and default parameters. The pair formation and trading period has been altered to 1 year. Data frequency was also limited to daily prices.
+
+
 ## Compatible Datasets
 The model takes in the closing day stock prices for every trading day in a specified time period. The table must have seven columns named: year, date, TICKER, PRC, rel_PRC, eff_PRC, and eff_rel_PRC. These consist of int "YYYY", int "YYYYMMDD", string for the stock ticker, float for price, float for relative price, float for effective price, and float for effective relative price. Stock price data can be found in online sources and relative price, effective price, and effective relative price can be derived from the data.
 
 To calculate the relative price, first choose the training and trading period length T. Over that specified period of time T, the relative price is defined as p_t/p_0 for all t in T where t is an interval of time. The effective price and effective relative prices normalize price values over stock splits. A sample formatted dataset of daily stock prices in 2002 and 2003 from the S&P 500 where T = 1 year is included (sample_data.csv). Data sets used with the program should be formatted identically.
 
-## Default Model
-Current implementation closely follows Gatev, Goetzmann, and Rouwenhorst 1998 (https://papers.ssrn.com/sol3/papers.cfm?abstract_id=141615) for the model and default parameters. The pair formation and trading period has been altered to 1 year. Data frequency was also limited to daily prices.
 
 ## Usage
 The model may be run with three functions: period_profits, det_period_profits, and cp_period_profits. The latter two gives detailed information of trades.
@@ -37,7 +40,7 @@ For each pair in the defined set, four entries are reported
 
 Finally, the function also reports the overall return from the portfolio.
 
-## Customizing the Model
+## Customization
 The model can be customized by changing the parameters of the functions. These include
 - dataset (universe of stocks considered)
 - pair formation year
