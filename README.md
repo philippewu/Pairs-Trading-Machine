@@ -5,7 +5,7 @@ This Pairs Trading Machine allows the customization and testing of the classical
 
 
 ## Default Model
-Current implementation closely follows Gatev, Goetzmann, and Rouwenhorst 1998 (https://papers.ssrn.com/sol3/papers.cfm?abstract_id=141615) for the model and default parameters. The pair formation and trading period has been altered to 1 year. Data frequency was also limited to daily prices.
+Current implementation closely follows [Gatev, Goetzmann, and Rouwenhorst 1998](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=141615) for the model and default parameters. The pair formation and trading period has been altered to 1 year. Data frequency was also limited to daily prices.
 
 
 ## Compatible Datasets
